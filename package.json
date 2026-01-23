@@ -1,7 +1,7 @@
 {
-  "name": "snake-server",
+  "name": "snake-websocket",
   "version": "1.0.0",
-  "description": "Serveur WebSocket pour le jeu Snake multijoueur",
+  "description": "Jeu Snake multijoueur avec scores synchronisés",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -9,5 +9,8 @@
   "dependencies": {
     "express": "^4.18.2",
     "socket.io": "^4.7.2"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }
