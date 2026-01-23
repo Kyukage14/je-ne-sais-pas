@@ -1,30 +1,46 @@
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
+const path = require("path");
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { origin: "*" }
+    cors: { origin: "*" }
 });
 
-let gameState = {
-  snake: [{ x: 10, y: 10 }],
-  food: { x: 5, y: 5 },
-  score: 0,
-  superMode: false
-};
+// Serve les fichiers front-end depuis le dossier /public
+app.use(express.static(path.join(__dirname, "public")));
 
+// Scores globaux
+let globalHighScores = [];
+
+// WebSocket
 io.on("connection", (socket) => {
-  console.log("Un joueur connecté");
+    console.log("Nouveau joueur connecté :", socket.id);
 
-  socket.emit("state", gameState);
+    // Envoyer les scores globaux au joueur qui vient de se connecter
+    socket.emit("state", { highScores: globalHighScores });
 
-  socket.on("update", (state) => {
-    gameState = state;
-    socket.broadcast.emit("state", gameState);
-  });
+    // Quand un joueur envoie ses scores
+    socket.on("update", (data) => {
+        if (data.highScores) {
+            globalHighScores = data.highScores
+                .sort((a, b) => b.score - a.score)
+                .slice(0, 10); // garder seulement le top 10
+        }
+
+        // Envoyer les scores mis à jour à tous les joueurs
+        io.emit("state", { highScores: globalHighScores });
+    });
+
+    socket.on("disconnect", () => {
+        console.log("Joueur déconnecté :", socket.id);
+    });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log("Serveur démarré sur port", PORT));
+// Démarrage du serveur
+const PORT = process.env.PORT || 10000;
+server.listen(PORT, () => {
+    console.log(`Serveur Snake WebSocket lancé sur le port ${PORT}`);
+});
