@@ -1,46 +1,35 @@
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
-const path = require("path");
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-    cors: { origin: "*" }
+  cors: { origin: "*" }
 });
 
-// Serve les fichiers front-end depuis le dossier /public
-app.use(express.static(path.join(__dirname, "public")));
+let highScores = [];
 
-// Scores globaux
-let globalHighScores = [];
-
-// WebSocket
 io.on("connection", (socket) => {
-    console.log("Nouveau joueur connecté :", socket.id);
+  console.log("Un joueur connecté");
 
-    // Envoyer les scores globaux au joueur qui vient de se connecter
-    socket.emit("state", { highScores: globalHighScores });
+  // Envoyer les scores actuels au joueur qui vient de se connecter
+  socket.emit("state", { highScores });
 
-    // Quand un joueur envoie ses scores
-    socket.on("update", (data) => {
-        if (data.highScores) {
-            globalHighScores = data.highScores
-                .sort((a, b) => b.score - a.score)
-                .slice(0, 10); // garder seulement le top 10
-        }
+  // Quand un joueur envoie son score
+  socket.on("update", ({ name, score }) => {
+    const existing = highScores.find(item => item.name === name);
+    if (!existing || score > existing.score) {
+      if (existing) existing.score = score;
+      else highScores.push({ name, score });
+      highScores.sort((a,b) => b.score - a.score);
+      if (highScores.length > 10) highScores.pop();
+    }
 
-        // Envoyer les scores mis à jour à tous les joueurs
-        io.emit("state", { highScores: globalHighScores });
-    });
-
-    socket.on("disconnect", () => {
-        console.log("Joueur déconnecté :", socket.id);
-    });
+    // Diffuser les scores à tous les joueurs
+    io.emit("state", { highScores });
+  });
 });
 
-// Démarrage du serveur
-const PORT = process.env.PORT || 10000;
-server.listen(PORT, () => {
-    console.log(`Serveur Snake WebSocket lancé sur le port ${PORT}`);
-});
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => console.log("Serveur démarré sur port", PORT));
