@@ -1,35 +1,58 @@
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
+const cors = require("cors");
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { origin: "*" }
+    cors: { origin: "*" }
 });
 
+// ----------------------
+// Serve static files
+// ----------------------
+app.use(express.static("public"));
+app.use(cors());
+
+// ----------------------
+// High Scores in memory
+// ----------------------
 let highScores = [];
 
+// ----------------------
+// Socket.io logic
+// ----------------------
 io.on("connection", (socket) => {
-  console.log("Un joueur connecté");
+    console.log("A user connected: " + socket.id);
 
-  // Envoyer les scores actuels au joueur qui vient de se connecter
-  socket.emit("state", { highScores });
+    // Send current state (scores) to the new player
+    socket.emit("state", { highScores });
 
-  // Quand un joueur envoie son score
-  socket.on("update", ({ name, score }) => {
-    const existing = highScores.find(item => item.name === name);
-    if (!existing || score > existing.score) {
-      if (existing) existing.score = score;
-      else highScores.push({ name, score });
-      highScores.sort((a,b) => b.score - a.score);
-      if (highScores.length > 10) highScores.pop();
-    }
+    // Receive updates from clients
+    socket.on("update", data => {
+        if (!data.name || typeof data.score !== "number") return;
 
-    // Diffuser les scores à tous les joueurs
-    io.emit("state", { highScores });
-  });
+        const existing = highScores.find(item => item.name.toLowerCase() === data.name.toLowerCase());
+        if (!existing || data.score > existing.score) {
+            if (existing) existing.score = data.score;
+            else highScores.push({ name: data.name, score: data.score });
+
+            highScores.sort((a, b) => b.score - a.score);
+            if (highScores.length > 10) highScores.pop();
+        }
+
+        // Broadcast updated scores to all players
+        io.emit("state", { highScores });
+    });
+
+    socket.on("disconnect", () => {
+        console.log("User disconnected: " + socket.id);
+    });
 });
 
+// ----------------------
+// Start server
+// ----------------------
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log("Serveur démarré sur port", PORT));
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
