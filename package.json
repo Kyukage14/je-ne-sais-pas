@@ -1,16 +1,17 @@
 {
-  "name": "snake-websocket",
+  "name": "snake-multiplayer",
   "version": "1.0.0",
-  "description": "Jeu Snake multijoueur avec scores synchronisés",
+  "description": "Snake multiplayer game with super mode and leaderboard",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
+    "cors": "^2.8.5",
     "express": "^4.18.2",
     "socket.io": "^4.7.2"
   },
   "engines": {
-    "node": "22.x"
+    "node": "18.x"
   }
 }
