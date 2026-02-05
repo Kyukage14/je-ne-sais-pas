@@ -150,3 +150,15 @@ io.on("connection", (socket) => {
 // ----------------------
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+socket.on("removeFriend", ({ from, to }) => {
+    if (friends[from]) friends[from] = friends[from].filter(f => f !== to);
+    if (friends[to]) friends[to] = friends[to].filter(f => f !== from);
+
+    // Mettre à jour les deux joueurs s'ils sont en ligne
+    Object.entries(connectedUsers).forEach(([id, name]) => {
+        if (name === from || name === to) {
+            io.to(id).emit("friendsList", friends[name] || []);
+        }
+    });
+});
+
